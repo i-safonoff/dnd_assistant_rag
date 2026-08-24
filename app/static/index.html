@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>D&D Assistant</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 16px; background: #111; color: #eee; }
+  h1 { font-size: 1.3rem; }
+  #chat { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
+  .msg { padding: 12px 14px; border-radius: 8px; white-space: pre-wrap; }
+  .msg.question { background: #2a2a3a; align-self: flex-end; }
+  .msg.answer { background: #1e2a1e; }
+  .citations { margin-top: 8px; font-size: 0.85rem; color: #9c9; }
+  .citations div { margin-top: 2px; }
+  form { display: flex; gap: 8px; }
+  input[type=text] { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #444; background: #1a1a1a; color: #eee; }
+  button { padding: 10px 18px; border-radius: 6px; border: none; background: #4a6; color: #fff; cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  #status { font-size: 0.85rem; color: #888; margin-top: 8px; }
+  #ingest { margin-top: 40px; padding-top: 16px; border-top: 1px solid #333; }
+  #ingest input[type=file] { color: #eee; }
+</style>
+</head>
+<body>
+  <h1>D&D Assistant</h1>
+  <div id="chat"></div>
+  <form id="ask-form">
+    <input type="text" id="question" placeholder="Спроси что-нибудь про правила..." autocomplete="off" required>
+    <button type="submit" id="ask-btn">Спросить</button>
+  </form>
+  <div id="status"></div>
+
+  <div id="ingest">
+    <h2 style="font-size:1rem;">Загрузить PDF в базу</h2>
+    <form id="ingest-form">
+      <input type="file" id="pdf-file" accept="application/pdf" required>
+      <button type="submit" id="ingest-btn">Загрузить</button>
+    </form>
+  </div>
+
+<script>
+const chat = document.getElementById('chat');
+const status = document.getElementById('status');
+
+function addMessage(text, cls, citations) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + cls;
+  div.textContent = text;
+  if (citations && citations.length) {
+    const c = document.createElement('div');
+    c.className = 'citations';
+    citations.forEach(cit => {
+      const pages = cit.page_start === cit.page_end ? `p.${cit.page_start}` : `pp.${cit.page_start}-${cit.page_end}`;
+      const line = document.createElement('div');
+      line.textContent = `[${cit.filename}, ${pages}, ${cit.section_heading || ''}]`;
+      c.appendChild(line);
+    });
+    div.appendChild(c);
+  }
+  chat.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth' });
+}
+
+document.getElementById('ask-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = document.getElementById('question');
+  const btn = document.getElementById('ask-btn');
+  const question = input.value.trim();
+  if (!question) return;
+
+  addMessage(question, 'question');
+  input.value = '';
+  btn.disabled = true;
+  status.textContent = 'Думаю...';
+
+  try {
+    const resp = await fetch('/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, top_k: 5 }),
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    addMessage(data.answer, 'answer', data.citations);
+    status.textContent = '';
+  } catch (err) {
+    status.textContent = 'Ошибка: ' + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('ingest-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fileInput = document.getElementById('pdf-file');
+  const btn = document.getElementById('ingest-btn');
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  btn.disabled = true;
+  status.textContent = `Загружаю ${file.name}...`;
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const resp = await fetch('/ingest', { method: 'POST', body: formData });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || `HTTP ${resp.status}`);
+    status.textContent = `Готово: ${data.filename} — ${data.chunk_count} фрагментов.`;
+    fileInput.value = '';
+  } catch (err) {
+    status.textContent = 'Ошибка: ' + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
