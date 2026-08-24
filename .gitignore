@@ -1,0 +1,37 @@
+# Python / Poetry
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Model weights & caches — never commit (can be tens of GB)
+**/*.safetensors
+**/*.gguf
+**/*.bin
+**/*.pt
+**/*.pth
+models/
+huggingface_cache/
+.cache/
+legacy_qwen27b_model/
+
+# Docker volumes
+docker/postgres/data/
+pgdata/
+
+# User's ingested source PDFs (large, user-specific)
+data/pdfs/*
+!data/pdfs/.gitkeep
+
+# IDE / OS
+.idea/
+.claude/settings.local.json
+Thumbs.db
+.DS_Store
