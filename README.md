@@ -1,5 +1,11 @@
 # D&D Assistant RAG
 
+![Python](https://img.shields.io/badge/python-3.13-blue?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![pgvector](https://img.shields.io/badge/vector%20store-pgvector-336791?logo=postgresql&logoColor=white)
+![vLLM](https://img.shields.io/badge/serving-vLLM-orange)
+![Docker](https://img.shields.io/badge/docker-compose-2496ED?logo=docker&logoColor=white)
+
 Local, fully offline RAG system over D&D rulebooks/campaign PDFs, answering questions with a
 locally-hosted Qwen model. No calls to hosted LLM APIs.
 
